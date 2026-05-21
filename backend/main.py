@@ -11,9 +11,23 @@ from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import os
+from pydantic import BaseModel
 
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
 
 app=FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  #React frontend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 async def get_db():                                     #this method is used to connect to database
     async with AsyncSessionLocal() as session:          #AsyncSessionLocal() connects to database as fresh session
@@ -26,24 +40,22 @@ async def startup():
 
 @app.post("/register")
 async def register(
-    name: str,
-    email: str,
-    password: str,                           #checks name, email, password is string, if not returns error
-    db: AsyncSession = Depends(get_db)       #here we call a fresh session
+    data: RegisterRequest,
+    db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
-        select(UserModel).where(UserModel.email == email) #(sql)# SELECT * FROM users WHERE email = email
+        select(UserModel).where(UserModel.email == data.email) #(sql)# SELECT * FROM users WHERE email = email
     )
     existing_user = result.scalar_one_or_none()    #result.scalar_one_or_none()  handles the type of result we want, in this case we want a single email if exist or return none if not found
 
     if existing_user:
         return {"error": "Email already exists"}  #user exist so can't allow user to register once again
 
-    user_obj = User(name, email, password)    #stores the new users name, email, password with the help of user class in user.py
+    user_obj = User(data.name, data.email, data.password)    #stores the new users name, email, password with the help of user class in user.py
 
     new_user = UserModel(
-        name=name,
-        email=email,
+        name=data.name,
+        email=data.email,
         hashed_password=user_obj.password.decode("utf-8")  #PostgreSQL doesnot understand bytes so decode it(not bringing back the original password just converting bytes format to string so no one knows the password except the user)
     )
 

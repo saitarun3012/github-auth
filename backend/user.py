@@ -23,8 +23,10 @@ class User:
             print("invalid password")
 
     def get_user(self):
-        parts= self.name.split()
-        first_name= parts[0]
-        last_name= parts[1][0]                                  
-        return f"{first_name} {last_name}."                      #gets users first name(part[0]) and first letter of second name(paers[1][0]))
+       parts = self.name.split()
+       first_name = parts[0]
+       if len(parts) > 1:
+           last_name = parts[1][0]
+           return f"{first_name} {last_name}."
+       return first_name      
     
