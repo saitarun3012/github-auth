@@ -12,11 +12,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SECRET_KEY = "secret key"
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_SECRET_KEY = "ref"
+REFRESH_SECRET_KEY = os.getenv("REFRESH_SECRET_KEY")
 REFRESH_SECRET_KEY_EXPIRY = 7
+GITHUB_CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
+GITHUB_CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
 token_extractor = OAuth2PasswordBearer(tokenUrl="/login")    #OAuth2PasswordBearer is a class from FastAPIs security library which extreacts token and tokenUrl="/login" tells the location , where the token is created
 def create_token(data: dict):                                                   # dict is the type of data
     to_encode = data.copy()                                                      #copy data so original data remains safe
@@ -63,4 +65,37 @@ def refresh_token(data: dict):                                                  
     to_encode.update({"exp": expire})                                            #include calculated expiry time
     encoded_jwt = jwt.encode(to_encode, REFRESH_SECRET_KEY, algorithm=ALGORITHM)   #scrimbles the data into token
     return encoded_jwt
+
+async def current_user_from_refresh(request: Request):
+    
+    token = request.cookies.get("refresh_token")  
+    
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token missing"
+        )
+    
+    try:
+        payload = jwt.decode(token, REFRESH_SECRET_KEY, algorithms=[ALGORITHM])
+        
+        email: str = payload.get("sub")
+        
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+            
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(UserModel).where(UserModel.email == email)
+        )
+        user = result.scalar_one_or_none()
+    
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+    return user
+ 
 
