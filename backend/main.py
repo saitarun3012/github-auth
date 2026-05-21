@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from database import AsyncSessionLocal, engine, Base
 from models import UserModel
 from user import User
-from auth import create_token, refresh_token
+from auth import create_token, refresh_token, gets_current_user
 import bcrypt
 
 app=FastAPI()
@@ -82,5 +82,32 @@ async def login(
         samesite="lax"
     )
     return {"access_token": access_token, "token_type": "bearer"}
+@app.get("/me")
+async def get_me(current_user: UserModel=Depends(gets_current_user)):
+    return {
+        "name":current_user.name,
+        "email":current_user.email
+    }
+
+@app.put("/me/update")
+async def update_me(
+    new_name: str,
+    current_user: UserModel = Depends(gets_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    current_user.name = new_name
+    db.add(current_user)
+    await db.commit()
+    return {"message": f"Name updated to {new_name}"}
+
+@app.delete("/me/delete")
+async def delete_me(
+    current_user: UserModel = Depends(gets_current_user),    #depends on current_user method in auth.py
+    db: AsyncSession = Depends(get_db)
+):
+    await db.delete(current_user)
+    await db.commit()
+    return {"message": "Account deleted"}
+
                        
 
