@@ -185,4 +185,6 @@ async def github_callback(code: str, response: Response, db: AsyncSession = Depe
         max_age=7 * 24 * 60 * 60,
         samesite="lax"
     )
-    return {"access_token": access_token, "token_type":"bearer"}
+    return RedirectResponse(
+    f"http://localhost:5173?token={access_token}"
+)
