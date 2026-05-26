@@ -23,7 +23,7 @@ app=FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  #React frontend
+    allow_origins=["http://localhost:5173", "http://localhost:8000", "http://localhost:80"],  #React frontend
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,7 +44,7 @@ async def register(
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
-        select(UserModel).where(UserModel.email == data.email) #(sql)# SELECT * FROM users WHERE email = email
+        select(UserModel).where(UserModel.email == data.email) #(sql)# SELECT* FROM users WHERE email = email
     )
     existing_user = result.scalar_one_or_none()    #result.scalar_one_or_none()  handles the type of result we want, in this case we want a single email if exist or return none if not found
 
